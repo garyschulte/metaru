@@ -3,7 +3,7 @@
 
 set -e
 
-cd /Users/garyschulte/dev/kitsui
+cd /Users/garyschulte/dev/metaru
 
 echo "=== Building Mock Native Library ==="
 c++ -std=c++17 -shared -fPIC -o libbesu_native_evm.dylib src/mock_native_evm.cpp -I./include
@@ -16,7 +16,7 @@ cd /Users/garyschulte/dev/besu
 
 # Run with system property
 ./gradlew :evm:test --tests NativeMessageProcessorTest --rerun-tasks \
-  -Dorg.gradle.jvmargs="-Djava.library.path=/Users/garyschulte/dev/kitsui"
+  -Dorg.gradle.jvmargs="-Djava.library.path=/Users/garyschulte/dev/metaru"
 
 echo ""
 echo "=== Results ==="

@@ -277,14 +277,14 @@ MemorySegment preExecutionStub = LINKER.upcallStub(
 
 **Quick Test**:
 ```bash
-cd /Users/garyschulte/dev/kitsui
+cd /Users/garyschulte/dev/metaru
 ./run_test.sh
 ```
 
 **Manual**:
 ```bash
 # Build mock library
-cd /Users/garyschulte/dev/kitsui
+cd /Users/garyschulte/dev/metaru
 c++ -std=c++17 -shared -fPIC -o libbesu_native_evm.dylib \
     src/mock_evm_with_tracer.cpp -I./include
 
@@ -311,7 +311,7 @@ Tests are configured in `besu/evm/build.gradle`:
 ```gradle
 test {
   // Set library path for native EVM
-  systemProperty 'java.library.path', '/Users/garyschulte/dev/kitsui'
+  systemProperty 'java.library.path', '/Users/garyschulte/dev/metaru'
 
   // Enable Panama FFM
   jvmArgs '--enable-preview', '--enable-native-access=ALL-UNNAMED'
@@ -337,21 +337,21 @@ test {
 
 **macOS**:
 ```bash
-cd /Users/garyschulte/dev/kitsui
+cd /Users/garyschulte/dev/metaru
 c++ -std=c++17 -shared -fPIC -o libbesu_native_evm.dylib \
     src/mock_evm_with_tracer.cpp -I./include
 ```
 
 **Linux**:
 ```bash
-cd /Users/garyschulte/dev/kitsui
+cd /Users/garyschulte/dev/metaru
 c++ -std=c++17 -shared -fPIC -o libbesu_native_evm.so \
     src/mock_evm_with_tracer.cpp -I./include
 ```
 
 **Windows**:
 ```bash
-cd /Users/garyschulte/dev/kitsui
+cd /Users/garyschulte/dev/metaru
 cl /LD /std:c++17 /I.\include src\mock_evm_with_tracer.cpp \
     /Fe:besu_native_evm.dll
 ```
@@ -380,7 +380,7 @@ cd /Users/garyschulte/dev/besu
 ## Project Structure
 
 ```
-kitsui/
+metaru/
 ├── include/
 │   ├── message_frame_memory.h    # 384-byte struct layout
 │   ├── tracer_callback.h         # Tracer upcall interface
