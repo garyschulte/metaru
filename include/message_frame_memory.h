@@ -28,6 +28,12 @@ namespace evm {
  * - Return data (dynamic): returnDataSize bytes
  * - Logs (dynamic): logCount * sizeof(Log)
  * - Access lists (dynamic)
+ *
+ * PORTABILITY NOTES:
+ * - Endianness: Assumes little-endian (x86-64, aarch64 Linux/Darwin). Not tested on big-endian.
+ * - Alignment: Struct is 64-byte aligned to match cache lines on both x86 and ARM.
+ * - Signedness: Some fields are uint32_t (C++) but read as int32_t (Java). See field comments.
+ * - GC Safety: Java uses Panama FFM Arena - memory is off-heap and pinned during native calls.
  */
 struct __attribute__((aligned(64))) MessageFrameMemory {
     // ========== Machine State (48 bytes) ==========
@@ -37,7 +43,7 @@ struct __attribute__((aligned(64))) MessageFrameMemory {
     int64_t   gas_remaining;       // Gas remaining
     int64_t   gas_refund;          // Gas refund amount
     int32_t   stack_size;          // Current stack size
-    int32_t   memory_size;         // Current memory size in bytes (max 2GB)
+    int32_t   memory_size;         // Current memory size in bytes (signed, max 2^31-1 = 2GB)
     uint32_t  state;               // MessageFrameState enum (as int)
     uint32_t  type;                // MessageFrameType enum (as int)
     uint32_t  is_static;           // Static call flag (0 or 1)
@@ -56,11 +62,18 @@ struct __attribute__((aligned(64))) MessageFrameMemory {
     uint64_t  warm_addresses_ptr;  // Offset to warm address set
 
     // ========== Sizes for Variable Data (32 bytes) ==========
+    // IMPORTANT: Size fields are uint32_t (unsigned) in C++ but read as int32_t (signed) in Java.
+    // To ensure Java compatibility, these values MUST NOT exceed 2^31-1 (2,147,483,647 bytes).
+    // This is sufficient for EVM constraints:
+    // - Code: max 24KB (EIP-170)
+    // - Input: practical limit ~hundreds of KB
+    // - Memory: gas costs limit to ~hundreds of MB
+    // - Stack: max 1024 items = 32KB
 
-    uint32_t  code_size;           // Code size in bytes
-    uint32_t  input_size;          // Input data size in bytes
-    uint32_t  output_size;         // Output data size in bytes
-    uint32_t  return_data_size;    // Return data size in bytes
+    uint32_t  code_size;           // Code size in bytes (MUST be < 2^31 for Java)
+    uint32_t  input_size;          // Input data size in bytes (MUST be < 2^31 for Java)
+    uint32_t  output_size;         // Output data size in bytes (MUST be < 2^31 for Java)
+    uint32_t  return_data_size;    // Return data size in bytes (MUST be < 2^31 for Java)
     uint32_t  logs_count;          // Number of logs
     uint32_t  warm_addresses_count; // Number of warm addresses
     uint32_t  warm_storage_count;  // Number of warm storage slots
