@@ -1,0 +1,48 @@
+cmake_minimum_required(VERSION 3.15)
+project(besu_native_evm_mock VERSION 0.1.0 LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Build type
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release)
+endif()
+
+# Include directories
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+# Build mock shared library (minimal implementation for testing)
+add_library(besu_native_evm SHARED
+    src/mock_native_evm.cpp
+)
+
+target_include_directories(besu_native_evm
+    PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+)
+
+# Platform-specific settings
+if(APPLE)
+    set_target_properties(besu_native_evm PROPERTIES
+        SUFFIX ".dylib"
+        INSTALL_RPATH "@loader_path"
+    )
+elseif(UNIX)
+    set_target_properties(besu_native_evm PROPERTIES
+        SUFFIX ".so"
+        INSTALL_RPATH "$ORIGIN"
+    )
+elseif(WIN32)
+    set_target_properties(besu_native_evm PROPERTIES
+        SUFFIX ".dll"
+    )
+endif()
+
+# Position Independent Code
+set_target_properties(besu_native_evm PROPERTIES
+    POSITION_INDEPENDENT_CODE ON
+)
+
+message(STATUS "Building mock besu_native_evm for ${CMAKE_SYSTEM_NAME}")
+message(STATUS "Output: libbesu_native_evm${CMAKE_SHARED_LIBRARY_SUFFIX}")

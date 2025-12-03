@@ -41,7 +41,7 @@ void execute_message(MessageFrameMemory* frame, void* tracer_callback) {
     // Log entry
     printf("Native EVM: execute_message called\n");
     printf("  Initial PC: %d\n", frame->pc);
-    printf("  Initial gas: %ld\n", frame->gas_remaining);
+    printf("  Initial gas: %lld\n", (long long)frame->gas_remaining);
     printf("  Initial stack size: %d\n", frame->stack_size);
     printf("  Initial memory size: %d\n", frame->memory_size);
 
@@ -53,8 +53,8 @@ void execute_message(MessageFrameMemory* frame, void* tracer_callback) {
         frame->gas_remaining -= 3;
     } else {
         // Out of gas
-        frame->state = 6; // EXCEPTIONAL_HALT
-        frame->halt_reason = 1; // OUT_OF_GAS
+        frame->state = 4; // EXCEPTIONAL_HALT
+        frame->halt_reason = 1; // INSUFFICIENT_GAS
         printf("  OUT OF GAS\n");
         return;
     }
@@ -97,10 +97,10 @@ void execute_message(MessageFrameMemory* frame, void* tracer_callback) {
     }
 
     // Set state to COMPLETED_SUCCESS
-    frame->state = 1; // COMPLETED_SUCCESS
+    frame->state = 7; // COMPLETED_SUCCESS
 
     printf("  Final PC: %d\n", frame->pc);
-    printf("  Final gas: %ld\n", frame->gas_remaining);
+    printf("  Final gas: %lld\n", (long long)frame->gas_remaining);
     printf("  Final stack size: %d\n", frame->stack_size);
     printf("  Final state: %d\n", frame->state);
 }
