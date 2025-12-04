@@ -30,7 +30,15 @@ echo ""
 
 # Run tests (library path configured in besu/evm/build.gradle)
 cd /Users/garyschulte/dev/besu
-./gradlew :evm:test --tests NativeMessageProcessorTest --rerun-tasks
+
+# If argument provided, run specific test, otherwise run all
+if [ -n "$1" ]; then
+    echo "Running specific test: $1"
+    ./gradlew :evm:test --tests "NativeMessageProcessorTest.$1" --console=plain --rerun-tasks
+else
+    echo "Running all NativeMessageProcessorTest tests"
+    ./gradlew :evm:test --tests NativeMessageProcessorTest --console=plain --rerun-tasks
+fi
 
 echo ""
 echo "=== Test Complete ==="
