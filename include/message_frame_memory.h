@@ -49,7 +49,7 @@ struct __attribute__((aligned(64))) MessageFrameMemory {
     uint32_t  is_static;           // Static call flag (0 or 1)
     uint32_t  depth;               // Call depth
 
-    // ========== Pointers to Variable Data (64 bytes) ==========
+    // ========== Pointers to Variable Data (80 bytes) ==========
     // These are relative offsets from the start of the MemorySegment
 
     uint64_t  stack_ptr;           // Offset to stack data
@@ -60,8 +60,10 @@ struct __attribute__((aligned(64))) MessageFrameMemory {
     uint64_t  return_data_ptr;     // Offset to return data
     uint64_t  logs_ptr;            // Offset to logs array
     uint64_t  warm_addresses_ptr;  // Offset to warm address set
+    uint64_t  storage_ptr;         // Offset to storage slots array (DEPRECATED - use witness)
+    uint64_t  witness_ptr;         // Offset to TransactionWitness (accounts + storage + code)
 
-    // ========== Sizes for Variable Data (32 bytes) ==========
+    // ========== Sizes for Variable Data (36 bytes) ==========
     // IMPORTANT: Size fields are uint32_t (unsigned) in C++ but read as int32_t (signed) in Java.
     // To ensure Java compatibility, these values MUST NOT exceed 2^31-1 (2,147,483,647 bytes).
     // This is sufficient for EVM constraints:
@@ -77,7 +79,8 @@ struct __attribute__((aligned(64))) MessageFrameMemory {
     uint32_t  logs_count;          // Number of logs
     uint32_t  warm_addresses_count; // Number of warm addresses
     uint32_t  warm_storage_count;  // Number of warm storage slots
-    uint32_t  padding2;            // Padding
+    uint32_t  storage_slot_count;  // Number of storage slots provided
+    uint32_t  max_storage_slots;   // Maximum storage slots allocated
 
     // ========== Immutable Context - Addresses (100 bytes) ==========
 
@@ -97,9 +100,9 @@ struct __attribute__((aligned(64))) MessageFrameMemory {
 
     uint32_t  halt_reason;         // ExceptionalHaltReason enum (0 = none)
 
-    // ========== Reserved for Future Use (40 bytes) ==========
+    // ========== Reserved for Future Use (16 bytes) ==========
 
-    uint8_t   reserved[40];        // Padding to 384 bytes total
+    uint8_t   reserved[16];        // Padding to 384 bytes total
 };
 
 // Static assertions to verify struct layout
@@ -112,17 +115,17 @@ static_assert(offsetof(MessageFrameMemory, pc) == 0,
 static_assert(offsetof(MessageFrameMemory, stack_ptr) == 48,
               "stack_ptr must be at offset 48");
 
-static_assert(offsetof(MessageFrameMemory, code_size) == 112,
-              "code_size must be at offset 112");
+static_assert(offsetof(MessageFrameMemory, code_size) == 128,
+              "code_size must be at offset 128");
 
-static_assert(offsetof(MessageFrameMemory, recipient) == 144,
-              "recipient must be at offset 144");
+static_assert(offsetof(MessageFrameMemory, recipient) == 164,
+              "recipient must be at offset 164");
 
-static_assert(offsetof(MessageFrameMemory, value) == 244,
-              "value must be at offset 244");
+static_assert(offsetof(MessageFrameMemory, value) == 264,
+              "value must be at offset 264");
 
-static_assert(offsetof(MessageFrameMemory, halt_reason) == 340,
-              "halt_reason must be at offset 340");
+static_assert(offsetof(MessageFrameMemory, halt_reason) == 360,
+              "halt_reason must be at offset 360");
 
 // Constants
 constexpr size_t STACK_ITEM_SIZE = 32;
