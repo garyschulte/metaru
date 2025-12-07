@@ -147,21 +147,6 @@ Total: 384 bytes
 └────────────────────────────────────┘
 ```
 
-### Critical Memory Layout Fix
-
-**Problem Discovered**: Original implementation allocated stack space based on *current* stack size. When operations pushed items during execution, the stack grew and **overwrote code bytes** stored immediately after.
-
-**Solution Applied**:
-- Reserve **full 32KB** (1024 items × 32 bytes) for stack space upfront
-- Code and other data placed *after* max stack reservation
-- Prevents corruption when stack grows during execution
-
-**Files Modified**:
-- `NativeMessageProcessor.java:207` - Reserve 1024 * 32 bytes instead of `frame.stackSize() * 32`
-- `MessageFrameLayout.java:205` - Update `estimateTotalSize()` to use max stack size
-
-## Mock EVM Implementation
-
 ### Current Features
 
 The mock EVM (`src/mock_evm_with_tracer.cpp`) implements a working execution loop with:
@@ -274,6 +259,7 @@ MemorySegment preExecutionStub = LINKER.upcallStub(
    - Reports: ~149 μs per execution, ~53,697 callbacks/sec
 
 ### Running Tests
+check out the corresponding besu branch, currently [https://github.com/garyschulte/besu](https://github.com/garyschulte/besu/tree/poc/metaru)
 
 **Quick Test**:
 ```bash
@@ -349,13 +335,6 @@ c++ -std=c++17 -shared -fPIC -o libbesu_native_evm.so \
     src/mock_evm_with_tracer.cpp -I./include
 ```
 
-**Windows**:
-```bash
-cd /Users/garyschulte/dev/metaru
-cl /LD /std:c++17 /I.\include src\mock_evm_with_tracer.cpp \
-    /Fe:besu_native_evm.dll
-```
-
 ### Verify Build
 
 ```bash
@@ -376,206 +355,6 @@ nm -gD libbesu_native_evm.so | grep execute     # Linux
 cd /Users/garyschulte/dev/besu
 ./gradlew build
 ```
-
-## Project Structure
-
-```
-metaru/
-├── include/
-│   ├── message_frame_memory.h    # 384-byte struct layout
-│   ├── tracer_callback.h         # Tracer upcall interface
-│   └── message_frame.h           # Enums and constants
-│
-├── src/
-│   ├── mock_evm_with_tracer.cpp  # Current mock EVM (PUSH1, ADD, STOP)
-│   └── mock_native_evm.cpp       # Old simple mock (archived)
-│
-├── run_test.sh                   # Build + test automation
-└── README.md                     # This file
-
-besu/evm/src/main/java/org/hyperledger/besu/evm/
-├── frame/
-│   ├── MessageFrameLayout.java   # Panama FFM memory layout
-│   └── IMessageFrame.java        # MessageFrame interface
-│
-└── processor/
-    └── NativeMessageProcessor.java  # Panama FFM processor
-
-besu/evm/src/test/java/org/hyperledger/besu/evm/processor/
-└── NativeMessageProcessorTest.java  # Test suite (6 tests)
-```
-
-## Key Implementation Files
-
-### Java
-
-**MessageFrameLayout.java**:
-- Defines 384-byte header structure using `StructLayout`
-- `VarHandle` accessors for each field
-- `estimateTotalSize()` for memory allocation
-- Static offsets for address and value fields
-
-**NativeMessageProcessor.java**:
-- `execute()` - Main entry point
-- `populateFrameMemory()` - Java → Shared memory
-- `updateFrameFromMemory()` - Shared memory → Java
-- `createTracerCallbacks()` - Setup upcall stubs
-- Automatic fallback to Java EVM if native unavailable
-
-### C++
-
-**message_frame_memory.h**:
-- `struct MessageFrameMemory` - Exact match to Java layout
-- `static_assert` checks to verify offsets
-- 384 bytes total, 64-byte aligned
-
-**tracer_callback.h**:
-- `struct TracerCallbacks` - Function pointers for upcalls
-- `struct OperationResult` - Operation metadata
-
-**mock_evm_with_tracer.cpp**:
-- `execute_message()` - Main execution loop
-- Opcode dispatch (PUSH1, ADD, STOP)
-- Tracer callback invocations
-- Gas accounting and stack operations
-
-## Next Steps
-
-### Immediate (This Week)
-1. ⏳ Add more opcodes (PUSH2-32, DUP, SWAP, arithmetic)
-2. ⏳ Implement memory operations (MLOAD, MSTORE)
-3. ⏳ Add comparison operations (LT, GT, EQ)
-4. ⏳ Add bitwise operations (AND, OR, XOR)
-
-### Short Term (2-4 Weeks)
-1. ⏳ Complete all ~140 EVM opcodes
-2. ⏳ Add WorldUpdater bridge for SLOAD/SSTORE
-3. ⏳ Implement SHA3/KECCAK256
-4. ⏳ Add CALL/CREATE operations
-5. ⏳ Integration testing with real contracts
-
-### Medium Term (1-2 Months)
-1. ⏳ Performance optimization
-2. ⏳ Memory bounds checking
-3. ⏳ Error handling hardening
-4. ⏳ Extensive testing
-5. ⏳ Production readiness
-
-## Technical Decisions
-
-### Why Panama FFM over JNI?
-
-| Aspect | JNI | Panama FFM |
-|--------|-----|------------|
-| **Performance** | ~7-14 ns/call | ~0.1-1 ns/call |
-| **Memory** | Must copy | Zero-copy |
-| **Safety** | Manual memory | Automatic (Arena) |
-| **Maintenance** | Complex | Simpler |
-| **Future** | Legacy | Standard (Java 23+) |
-
-### Why Int32 for memory_size?
-
-- Besu's `Memory` class uses `int activeWords` internally
-- EVM memory limited to 2GB (Integer.MAX_VALUE)
-- A 2GB memory allocation would cost over 51 trillion gas
-- Int32 is semantically correct and removes unnecessary casts
-- Changed from int64 in commit fixing memory_size type
-
-### Why Reserve Max Stack Space?
-
-**Original Bug**: Code placed immediately after current stack, got overwritten when stack grew.
-
-**Fix**: Reserve full 32KB (1024 items × 32 bytes) upfront. Wastes ~32KB per frame but:
-- Prevents corruption
-- Simpler memory layout
-- No complex reallocation
-- Worth the tradeoff for safety
-
-## Troubleshooting
-
-### Library Not Found
-
-**Symptom**: Tests skipped with "Native EVM library not available"
-
-**Solutions**:
-1. Check library exists: `ls -lh libbesu_native_evm.dylib`
-2. Verify test configuration in `evm/build.gradle`
-3. Check symbol export: `nm -gU libbesu_native_evm.dylib | grep execute`
-4. Try absolute path in test config
-
-### Wrong Architecture
-
-**Symptom**: "Can't load IA 32-bit .dylib on AMD 64-bit platform"
-
-**Solution**: Rebuild with correct architecture:
-```bash
-# Check current architecture
-file libbesu_native_evm.dylib
-
-# Should show: Mach-O 64-bit ... arm64 (or x86_64)
-# Rebuild if wrong
-c++ -std=c++17 -shared -fPIC -o libbesu_native_evm.dylib \
-    src/mock_evm_with_tracer.cpp -I./include
-```
-
-### Callbacks Not Working
-
-**Symptom**: `preExecutionCount == 0` in tests
-
-**Check**:
-1. Tracer is not `OperationTracer.NO_TRACING`
-2. `createTracerCallbacks()` returns non-null
-3. C++ receives non-null tracer pointer
-4. Callback adapters don't throw exceptions
-
-## Performance Comparison
-
-### Execution Models
-
-| Model | Boundary Crossings | Memory Copies | Speed |
-|-------|-------------------|---------------|-------|
-| **Pure Java** | 0 | 0 | Baseline (1x) |
-| **JNI Wrapper** | ~7000/contract | 0 | 0.0005x (2000x slower) |
-| **JNI Copy** | ~80/contract | 2 copies | 0.14x (7x slower) |
-| **Panama FFM** | **1** | **0** | **10-100x+ faster** |
-
-### Why Panama is Fast
-
-1. **Single Native Call**: Execute entire contract in one call
-2. **Zero-Copy**: No serialization or memory copying
-3. **Direct Memory**: C++ pointer arithmetic on Java memory
-4. **No Overhead**: Panama FFM has near-zero call overhead
-5. **Batch Processing**: ~1000 operations per native boundary crossing
-
-### Real-World Impact
-
-For a typical smart contract with 1000 operations:
-- **JNI Wrapper**: 7000 crossings × 14ns = 98,000ns (98μs)
-- **JNI Copy**: 2 copies × 2400ns + 80 crossings × 14ns = 5,920ns (6μs)
-- **Panama FFM**: 1 crossing × 1ns + 0 copies = **~1000ns (1μs)**
-
-**Result**: Panama is ~100x faster than JNI wrapper, ~6x faster than JNI copy.
-
-## References
-
-### Documentation
-- [Panama FFM JEP 454](https://openjdk.org/jeps/454)
-- [Foreign Function & Memory API Guide](https://docs.oracle.com/en/java/javase/22/core/foreign-function-and-memory-api.html)
-- [Ethereum Yellow Paper](https://ethereum.github.io/yellowpaper/paper.pdf)
-- [EVM Opcodes Reference](https://www.evm.codes/)
-
-### Related Projects
-- [evmone](https://github.com/ethereum/evmone) - Fast C++ EVM implementation
-- [revm](https://github.com/bluealloy/revm) - Rust EVM implementation
-- [Hyperledger Besu](https://github.com/hyperledger/besu) - Java Ethereum client
-
-## License
-
-Apache 2.0 - See Hyperledger Besu license
-
-## Contributing
-
-This is a research project exploring native EVM performance using Java 22 Panama FFM. The mock implementation demonstrates the architecture is sound and achieves expected performance characteristics.
 
 ## Status Summary
 
