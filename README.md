@@ -2,9 +2,12 @@
 
 High-performance native EVM implementation for Hyperledger Besu using Java 22 Panama Foreign Function & Memory API (FFM) for zero-copy shared memory interop.
 
-This is currently a vibe-coded project to check the viability of interop of a besu-flavored native evm and java besu, using panama.
+This is currently a __vibe-coded__ project to check the viability of interop between a besu-flavored native evm and java besu, using panama.
 
-This changelog provides some context, but the most relevant artifact is [performance-summary.md](performance_summary.md)
+This changelog provides some context, but the most relevant artifact of this experiment is [performance-summary.md](performance_summary.md)
+
+
+
 
 
 ## Project Status
