@@ -1,0 +1,58 @@
+# Build directories
+build/
+build-debug/
+cmake-build-*/
+
+# CMake generated files
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+*.cmake
+!CMakeLists.txt
+
+# Compiled libraries
+*.dylib
+*.so
+*.dll
+*.a
+*.lib
+
+# Object files
+*.o
+*.obj
+*.lo
+
+# Compiled executables
+*.exe
+*.out
+*.app
+
+# Debug files
+*.dSYM/
+*.su
+*.idb
+*.pdb
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Profiling data
+*.gcda
+*.gcno
+*.gcov
+gmon.out
+perf.data*
+
+# Test outputs
+test_layout.o
+*.log
+
+# Gradle files (if any)
+.gradle/
+build/
