@@ -27,6 +27,8 @@ Makefile
 *.exe
 *.out
 *.app
+*.elf
+*.bin
 
 # Debug files
 *.dSYM/
@@ -56,3 +58,7 @@ test_layout.o
 # Gradle files (if any)
 .gradle/
 build/
+
+zisk_demo/block_execution_demo
+zisk_demo/newlib-rv64im
+zisk_demo/zisk
